@@ -1,0 +1,236 @@
+---
+title: Installation
+description: How to install and integrate DeployableVM into your Solidity project
+---
+
+## Prerequisites
+
+Before installing DeployableVM, ensure you have:
+
+- [Foundry](https://book.getfoundry.sh/getting-started/installation) installed
+- A Solidity project initialized with `forge init`
+- Solidity compiler version 0.8.27 or higher
+
+<Warning>
+  For deterministic deployment compatibility, use the specific Foundry toolchain version:
+  ```bash
+  foundryup -C cb9dfae298fe0b5a5cdef2536955f50b8c7f0bf5
+  ```
+  This ensures consistent deployment addresses across different environments.
+</Warning>
+
+## Installation Methods
+
+<Tabs>
+  <Tab title="Use Existing Deployment">
+    The simplest approach is to use the already-deployed DeployableVM contract available on multiple chains. No installation required!
+
+    See the [Deployment Addresses](#deployment-addresses) section below for the contract address on your target chain.
+  </Tab>
+  <Tab title="Foundry (Recommended)">
+    Install the DeployableVM contract and its dependencies in your Foundry project:
+
+    <Steps>
+      <Step title="Add as Forge Dependency">
+        Install the contract directly from the GitHub repository:
+        ```bash
+        forge install cowprotocol/weiroll
+        ```
+      </Step>
+
+      <Step title="Update Remappings">
+        Add the remapping to your `foundry.toml` or `remappings.txt`:
+        ```toml
+        @cowprotocol/weiroll/=lib/weiroll/
+        ```
+      </Step>
+
+      <Step title="Import in Your Contract">
+        Import the DeployableVM contract:
+        ```solidity
+        import {DeployableVM} from "@cowprotocol/weiroll/src/DeployableVM.sol";
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="From Source">
+    Clone and build from source for development or custom deployments:
+
+    <Steps>
+      <Step title="Clone Repository">
+        ```bash
+        git clone https://github.com/cowprotocol/weiroll.git
+        cd weiroll
+        ```
+      </Step>
+
+      <Step title="Install Dependencies">
+        ```bash
+        forge install
+        ```
+      </Step>
+
+      <Step title="Build">
+        ```bash
+        forge build
+        ```
+      </Step>
+
+      <Step title="Run Tests">
+        Verify the installation:
+        ```bash
+        forge test
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## Compiler Configuration
+
+To match the production deployment settings and achieve optimal gas efficiency, configure your `foundry.toml`:
+
+```toml
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+
+# Compiler settings
+via_ir = true
+optimizer = true
+optimizer_runs = 1000000
+solc = "0.8.27"
+
+[fmt]
+sort_imports = true
+```
+
+<Info>
+  **Why these settings?**
+  - `via_ir = true`: Enables advanced optimization through the intermediate representation compiler
+  - `optimizer_runs = 1000000`: Optimizes for contracts that will be called frequently, reducing execution costs
+  - `solc = "0.8.27"`: Matches the production deployment version
+</Info>
+
+## Deployment Addresses
+
+DeployableVM is deployed at the same deterministic address across multiple networks using CREATE2 with an empty salt:
+
+<CodeGroup>
+```text Ethereum Mainnet
+Chain ID: 1
+Address: 0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963
+Tx: 0x6e22d6584ebfad16a5d222ae5e52c901b8a2a90f4948e41fc573b4c3f37adbe7
+```
+
+```text Optimism
+Chain ID: 10
+Address: 0x9585c3062df1c247d5e373cfca9167f7dc2b5963
+Tx: 0x71e3384a0d565f141647004d13f317a5047b1304f85774ab4a5a36a8e5170063
+```
+
+```text BSC
+Chain ID: 56
+Address: 0x9585c3062df1c247d5e373cfca9167f7dc2b5963
+Tx: 0xc9d8adc83c0c9b4291c16485df474455f3e88e6e1f5c69410f15cc5e9f9df7c6
+```
+
+```text Gnosis Chain
+Chain ID: 100
+Address: 0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963
+Tx: 0xb22e5bedb95ed7c97308326c14b4ad9211a4f3d433839c0145ba233c402f07c1
+```
+
+```text Polygon
+Chain ID: 137
+Address: 0x9585c3062df1c247d5e373cfca9167f7dc2b5963
+Tx: 0xd1a743be2a13e767c1349edb0f9316504130e764d605fd150c4fd69b25a072d6
+```
+
+```text Base
+Chain ID: 8453
+Address: 0x9585c3062df1c247d5e373cfca9167f7dc2b5963
+Tx: 0xe4de4c19b497233a337dd00b51543cd148fad25e86378a2d0d1f54e7e06cf00c
+```
+
+```text Arbitrum One
+Chain ID: 42161
+Address: 0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963
+Tx: 0xf873b1ec29c2f57f18f99ce8762624bc1c82a0ca8a91bd64cf94af92254f41b8
+```
+
+```text Avalanche C-Chain
+Chain ID: 43114
+Address: 0x9585c3062df1c247d5e373cfca9167f7dc2b5963
+Tx: 0x6a5b973914929e0bc4019ee1a9aab99cfbcf1630722c663365459e88bcbf65c1
+```
+
+```text Sepolia Testnet
+Chain ID: 11155111
+Address: 0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963
+Tx: 0x5d873b89646e5b7947242ad3ef1e5b32394c6277b31162127e7a87356afb347e
+```
+</CodeGroup>
+
+<Note>
+  The address is consistent across all chains due to deterministic CREATE2 deployment with an empty salt (`""`).
+</Note>
+
+## Custom Deployment
+
+If you need to deploy your own instance of DeployableVM:
+
+<Steps>
+  <Step title="Set Environment Variables">
+    ```bash
+    export ETHERSCAN_API_KEY='your-api-key-here'
+    export PK='your-private-key'
+    export ETH_RPC_URL='https://your-rpc-url.example.com'
+    ```
+  </Step>
+
+  <Step title="Verify Deterministic Address">
+    Preview the deployment without broadcasting:
+    ```bash
+    forge script 'script/DeployableVM.s.sol:DeployableVMScript' \
+      -vvvv \
+      --rpc-url "$ETH_RPC_URL" \
+      --private-key "$PK"
+    ```
+  </Step>
+
+  <Step title="Deploy and Verify">
+    Deploy the contract and verify on the block explorer:
+    ```bash
+    forge script 'script/DeployableVM.s.sol:DeployableVMScript' \
+      -vvvv \
+      --rpc-url "$ETH_RPC_URL" \
+      --private-key "$PK" \
+      --verify \
+      --broadcast
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  Ensure you're using the correct Foundry version (see Prerequisites) to generate the expected deterministic address.
+</Warning>
+
+## Verification
+
+To verify your installation is working correctly:
+
+```bash
+forge test
+```
+
+You should see successful test output confirming:
+- The contract reverts when called directly (not via delegatecall)
+- The contract executes successfully when called via delegatecall
+
+## Next Steps
+
+<Card title="Quick Start" icon="rocket" href="/quickstart">
+  Learn how to use DeployableVM in your contracts with a complete working example
+</Card>

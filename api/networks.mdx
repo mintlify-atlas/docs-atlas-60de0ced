@@ -1,0 +1,182 @@
+---
+title: 'Network Deployments'
+description: 'DeployableVM deployment addresses across all supported networks'
+---
+
+## Overview
+
+The DeployableVM contract is deployed at deterministic addresses across multiple EVM-compatible chains. All deployments use the same bytecode and are deployed using CREATE2 for address consistency.
+
+<Note>
+All addresses are verified deployments of the DeployableVM contract. You can use these addresses to interact with the Weiroll VM via delegatecall from your contracts.
+</Note>
+
+## Deployment Addresses
+
+### Ethereum Mainnet
+
+**Chain ID:** 1
+
+- **Address:** `0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963`
+- **Transaction Hash:** `0x6e22d6584ebfad16a5d222ae5e52c901b8a2a90f4948e41fc573b4c3f37adbe7`
+
+```solidity
+address constant WEIROLL_VM = 0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963;
+```
+
+### Optimism
+
+**Chain ID:** 10
+
+- **Address:** `0x9585c3062df1c247d5e373cfca9167f7dc2b5963`
+- **Transaction Hash:** `0x71e3384a0d565f141647004d13f317a5047b1304f85774ab4a5a36a8e5170063`
+
+```solidity
+address constant WEIROLL_VM = 0x9585c3062df1c247d5e373cfca9167f7dc2b5963;
+```
+
+### BNB Smart Chain (BSC)
+
+**Chain ID:** 56
+
+- **Address:** `0x9585c3062df1c247d5e373cfca9167f7dc2b5963`
+- **Transaction Hash:** `0xc9d8adc83c0c9b4291c16485df474455f3e88e6e1f5c69410f15cc5e9f9df7c6`
+
+```solidity
+address constant WEIROLL_VM = 0x9585c3062df1c247d5e373cfca9167f7dc2b5963;
+```
+
+### Gnosis Chain
+
+**Chain ID:** 100
+
+- **Address:** `0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963`
+- **Transaction Hash:** `0xb22e5bedb95ed7c97308326c14b4ad9211a4f3d433839c0145ba233c402f07c1`
+
+```solidity
+address constant WEIROLL_VM = 0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963;
+```
+
+### Polygon
+
+**Chain ID:** 137
+
+- **Address:** `0x9585c3062df1c247d5e373cfca9167f7dc2b5963`
+- **Transaction Hash:** `0xd1a743be2a13e767c1349edb0f9316504130e764d605fd150c4fd69b25a072d6`
+
+```solidity
+address constant WEIROLL_VM = 0x9585c3062df1c247d5e373cfca9167f7dc2b5963;
+```
+
+### Base
+
+**Chain ID:** 8453
+
+- **Address:** `0x9585c3062df1c247d5e373cfca9167f7dc2b5963`
+- **Transaction Hash:** `0xe4de4c19b497233a337dd00b51543cd148fad25e86378a2d0d1f54e7e06cf00c`
+
+```solidity
+address constant WEIROLL_VM = 0x9585c3062df1c247d5e373cfca9167f7dc2b5963;
+```
+
+### Arbitrum One
+
+**Chain ID:** 42161
+
+- **Address:** `0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963`
+- **Transaction Hash:** `0xf873b1ec29c2f57f18f99ce8762624bc1c82a0ca8a91bd64cf94af92254f41b8`
+
+```solidity
+address constant WEIROLL_VM = 0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963;
+```
+
+### Avalanche C-Chain
+
+**Chain ID:** 43114
+
+- **Address:** `0x9585c3062df1c247d5e373cfca9167f7dc2b5963`
+- **Transaction Hash:** `0x6a5b973914929e0bc4019ee1a9aab99cfbcf1630722c663365459e88bcbf65c1`
+
+```solidity
+address constant WEIROLL_VM = 0x9585c3062df1c247d5e373cfca9167f7dc2b5963;
+```
+
+### Sepolia Testnet
+
+**Chain ID:** 11155111
+
+- **Address:** `0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963`
+- **Transaction Hash:** `0x5d873b89646e5b7947242ad3ef1e5b32394c6277b31162127e7a87356afb347e`
+
+```solidity
+address constant WEIROLL_VM = 0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963;
+```
+
+## Quick Reference Table
+
+| Network | Chain ID | Address |
+|---------|----------|----------|
+| Ethereum Mainnet | 1 | `0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963` |
+| Optimism | 10 | `0x9585c3062df1c247d5e373cfca9167f7dc2b5963` |
+| BNB Smart Chain | 56 | `0x9585c3062df1c247d5e373cfca9167f7dc2b5963` |
+| Gnosis Chain | 100 | `0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963` |
+| Polygon | 137 | `0x9585c3062df1c247d5e373cfca9167f7dc2b5963` |
+| Base | 8453 | `0x9585c3062df1c247d5e373cfca9167f7dc2b5963` |
+| Arbitrum One | 42161 | `0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963` |
+| Avalanche C-Chain | 43114 | `0x9585c3062df1c247d5e373cfca9167f7dc2b5963` |
+| Sepolia (Testnet) | 11155111 | `0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963` |
+
+## Usage
+
+To use the DeployableVM in your contract, reference the appropriate address for your target chain:
+
+```solidity
+contract MyContract {
+    address constant WEIROLL_VM = 0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963;
+    
+    function executeWeiroll(
+        bytes32[] calldata commands,
+        bytes[] memory state
+    ) external payable returns (bytes[] memory) {
+        (bool success, bytes memory result) = WEIROLL_VM.delegatecall(
+            abi.encodeWithSelector(
+                DeployableVM.execute.selector,
+                commands,
+                state
+            )
+        );
+        
+        require(success, "Weiroll execution failed");
+        return abi.decode(result, (bytes[]));
+    }
+}
+```
+
+## Verification
+
+You can verify these deployments by:
+
+1. Checking the transaction hash on the respective block explorer
+2. Verifying the contract bytecode matches the DeployableVM source
+3. Confirming the contract is verified on Etherscan or equivalent explorers
+
+<Warning>
+Always verify the contract address on the block explorer for your target chain before integrating. While these addresses are accurate as of deployment, always confirm you're interacting with the correct contract.
+</Warning>
+
+## Block Explorers
+
+- **Ethereum:** [etherscan.io](https://etherscan.io)
+- **Optimism:** [optimistic.etherscan.io](https://optimistic.etherscan.io)
+- **BNB Chain:** [bscscan.com](https://bscscan.com)
+- **Gnosis:** [gnosisscan.io](https://gnosisscan.io)
+- **Polygon:** [polygonscan.com](https://polygonscan.com)
+- **Base:** [basescan.org](https://basescan.org)
+- **Arbitrum:** [arbiscan.io](https://arbiscan.io)
+- **Avalanche:** [snowtrace.io](https://snowtrace.io)
+- **Sepolia:** [sepolia.etherscan.io](https://sepolia.etherscan.io)
+
+## See Also
+
+- [DeployableVM Contract](/api/deployable-vm) - Complete contract reference
+- [execute Function](/api/execute-function) - Detailed function documentation

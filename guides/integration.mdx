@@ -1,0 +1,199 @@
+---
+title: 'Integration Guide'
+description: 'Learn how to integrate DeployableVM into your smart contract'
+---
+
+## Overview
+
+DeployableVM must be integrated into your smart contract using `delegatecall`. The contract is designed to prevent direct execution and only allows execution through delegation, ensuring it operates within the context of your contract's storage.
+
+<Warning>
+Direct calls to `execute()` will revert with `CallableOnlyViaDelegateCall()`. You must use `delegatecall` to integrate DeployableVM.
+</Warning>
+
+## Integration Steps
+
+<Steps>
+  <Step title="Deploy or Reference DeployableVM">
+    You can either deploy your own instance or reference an existing deployment from the [multi-chain deployments](/guides/multi-chain).
+
+    ```solidity
+    import {DeployableVM} from "path/to/DeployableVM.sol";
+
+    contract YourContract {
+        address public immutable weirollVM;
+
+        constructor(address _weirollVM) {
+            weirollVM = _weirollVM;
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Execute Commands via Delegatecall">
+    Call the `execute` function using `delegatecall` to run Weiroll commands in your contract's context.
+
+    ```solidity
+    function executeWeiroll(
+        bytes32[] calldata commands,
+        bytes[] memory state
+    ) external payable returns (bytes[] memory) {
+        (bool success, bytes memory result) = weirollVM.delegatecall(
+            abi.encodeCall(DeployableVM.execute, (commands, state))
+        );
+        
+        require(success, "Weiroll execution failed");
+        return abi.decode(result, (bytes[]));
+    }
+    ```
+  </Step>
+
+  <Step title="Handle Return Values">
+    The `execute` function returns a `bytes[]` array containing the results of each command execution.
+
+    ```solidity
+    function executeAndProcess(
+        bytes32[] calldata commands,
+        bytes[] memory state
+    ) external payable returns (uint256) {
+        (bool success, bytes memory result) = weirollVM.delegatecall(
+            abi.encodeCall(DeployableVM.execute, (commands, state))
+        );
+        
+        require(success, "Weiroll execution failed");
+        bytes[] memory returnData = abi.decode(result, (bytes[]));
+        
+        // Process return data as needed
+        uint256 finalValue = abi.decode(returnData[0], (uint256));
+        return finalValue;
+    }
+    ```
+  </Step>
+</Steps>
+
+## Error Handling
+
+### Delegatecall Protection
+
+DeployableVM uses an immutable singleton pattern to prevent direct execution:
+
+```solidity DeployableVM.sol:16-26
+address private immutable WEIROLL_SINGLETON;
+
+constructor() {
+    WEIROLL_SINGLETON = address(this);
+}
+
+function execute(bytes32[] calldata commands, bytes[] memory state) public payable returns (bytes[] memory) {
+    // With the event of EIP-6780, we no longer have to guard against `SELFDESTRUCT`,
+    // but the following check is added out of an abundance of caution in the event
+    // the contract is deployed on a chain that does not support EIP-6780.
+    require(address(this) != WEIROLL_SINGLETON, CallableOnlyViaDelegateCall());
+
+    return _execute(commands, state);
+}
+```
+
+When called directly, `address(this)` equals `WEIROLL_SINGLETON`, causing a revert. When called via `delegatecall`, `address(this)` is the calling contract's address, allowing execution.
+
+### Best Practices
+
+<CodeGroup>
+```solidity Recommended Pattern
+function safeExecute(
+    bytes32[] calldata commands,
+    bytes[] memory state
+) external payable returns (bytes[] memory) {
+    (bool success, bytes memory result) = weirollVM.delegatecall(
+        abi.encodeCall(DeployableVM.execute, (commands, state))
+    );
+    
+    if (!success) {
+        // Bubble up the revert reason
+        assembly {
+            revert(add(result, 32), mload(result))
+        }
+    }
+    
+    return abi.decode(result, (bytes[]));
+}
+```
+
+```solidity With Custom Error
+function executeWithError(
+    bytes32[] calldata commands,
+    bytes[] memory state
+) external payable returns (bytes[] memory) {
+    (bool success, bytes memory result) = weirollVM.delegatecall(
+        abi.encodeCall(DeployableVM.execute, (commands, state))
+    );
+    
+    if (!success) {
+        revert WeirollExecutionFailed(result);
+    }
+    
+    return abi.decode(result, (bytes[]));
+}
+```
+</CodeGroup>
+
+## Testing Integration
+
+Here's how to test your integration using Foundry:
+
+```solidity Test Pattern from DeployableVM.t.sol
+contract YourContractTest is Test {
+    DeployableVM public weiVm;
+    YourContract public yourContract;
+
+    function setUp() public {
+        weiVm = new DeployableVM();
+        yourContract = new YourContract(address(weiVm));
+    }
+
+    function test_reverts_if_direct_call() public {
+        bytes32[] memory commands = new bytes32[](0);
+        bytes[] memory state = new bytes[](0);
+
+        vm.expectRevert(DeployableVM.CallableOnlyViaDelegateCall.selector);
+        weiVm.execute(commands, state);
+    }
+
+    function test_succeeds_via_delegatecall() public {
+        bytes32[] memory commands = new bytes32[](0);
+        bytes[] memory state = new bytes[](0);
+
+        (bool success,) = address(weiVm).delegatecall(
+            abi.encodeCall(DeployableVM.execute, (commands, state))
+        );
+        assertTrue(success);
+    }
+
+    function test_integration_works() public {
+        bytes32[] memory commands = new bytes32[](0);
+        bytes[] memory state = new bytes[](0);
+
+        bytes[] memory result = yourContract.executeWeiroll(commands, state);
+        assertEq(result.length, 0);
+    }
+}
+```
+
+## Security Considerations
+
+<Warning>
+- Always validate `commands` and `state` inputs before execution
+- Be aware that Weiroll commands execute with your contract's privileges
+- Test thoroughly with various command combinations
+- Consider access control for functions that call Weiroll
+</Warning>
+
+### EIP-6780 Protection
+
+DeployableVM includes protection against `SELFDESTRUCT` attacks, even on chains that don't fully support EIP-6780. The delegatecall check ensures that malicious commands cannot destroy the VM contract.
+
+## Next Steps
+
+- Learn how to [deploy DeployableVM](/guides/deployment) to a new chain
+- View all [multi-chain deployments](/guides/multi-chain)
+- Explore the [API Reference](/api/execute-function) for detailed function documentation

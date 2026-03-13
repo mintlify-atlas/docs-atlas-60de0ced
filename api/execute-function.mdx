@@ -1,0 +1,170 @@
+---
+title: 'execute Function'
+description: 'Detailed documentation of the DeployableVM execute function'
+---
+
+## Function Signature
+
+```solidity
+function execute(bytes32[] calldata commands, bytes[] memory state) 
+    public 
+    payable 
+    returns (bytes[] memory)
+```
+
+The `execute` function is the primary interface for running Weiroll scripts. It accepts an array of encoded commands and a state array, processes them through the Weiroll VM, and returns the updated state.
+
+## Parameters
+
+<ParamField path="commands" type="bytes32[]" required>
+  An array of encoded Weiroll commands to execute. Each `bytes32` value represents a packed command containing:
+  - Function selector
+  - Flags for the operation type
+  - Indices into the state array for arguments and return values
+  
+  Commands are executed sequentially in the order they appear in the array.
+</ParamField>
+
+<ParamField path="state" type="bytes[]" required>
+  An array of state bytes used during command execution. This array contains:
+  - Input values for the commands
+  - Intermediate values generated during execution
+  - Return values from function calls
+  
+  The state array is modified in-place as commands are executed.
+</ParamField>
+
+## Return Value
+
+<ResponseField name="return" type="bytes[]">
+  The updated state array after executing all commands. This contains:
+  - All original input values
+  - All intermediate values generated during execution
+  - Final return values from the executed commands
+  
+  The caller can extract specific return values by referencing the appropriate indices in the returned state array.
+</ResponseField>
+
+## Function Modifiers
+
+- **public**: Can be called externally or internally
+- **payable**: Can receive ETH, which may be used by commands during execution
+
+## Requirements
+
+<Warning>
+**Critical Requirement:** This function can **only** be called via delegatecall.
+</Warning>
+
+The function enforces that it must be executed via delegatecall, not as a direct call to the DeployableVM singleton. This is verified by checking:
+
+```solidity
+require(address(this) != WEIROLL_SINGLETON, CallableOnlyViaDelegateCall());
+```
+
+When called via delegatecall:
+- `address(this)` equals the address of the calling contract
+- `WEIROLL_SINGLETON` equals the address of the DeployableVM deployment
+- Since these differ, the check passes
+
+When called directly:
+- `address(this)` equals `WEIROLL_SINGLETON`
+- The check fails and the function reverts
+
+## Reverts
+
+The function will revert in the following cases:
+
+### CallableOnlyViaDelegateCall()
+
+Thrown when the function is called directly on the DeployableVM singleton instead of via delegatecall.
+
+```solidity
+error CallableOnlyViaDelegateCall();
+```
+
+### Inherited Reverts
+
+The function may also revert for reasons inherited from the underlying WeirollVM implementation, such as:
+- Invalid command encoding
+- Failed external calls
+- Out of gas
+- Reentrancy violations (if protected)
+
+## Implementation Details
+
+```solidity
+function execute(bytes32[] calldata commands, bytes[] memory state) public payable returns (bytes[] memory) {
+    // With the event of EIP-6780, we no longer have to guard against `SELFDESTRUCT`,
+    // but the following check is added out of an abundance of caution in the event
+    // the contract is deployed on a chain that does not support EIP-6780.
+    require(address(this) != WEIROLL_SINGLETON, CallableOnlyViaDelegateCall());
+
+    return _execute(commands, state);
+}
+```
+
+The function:
+1. Verifies the delegatecall requirement
+2. Delegates to the internal `_execute` function from the parent WeirollVM contract
+3. Returns the resulting state array
+
+<Note>
+The delegatecall check provides protection even on chains that do not support EIP-6780. EIP-6780 eliminated the `SELFDESTRUCT` opcode behavior that could have been exploited, but this check adds an extra layer of security.
+</Note>
+
+## Usage Example
+
+Here's how to use the `execute` function via delegatecall from your contract:
+
+```solidity
+import {DeployableVM} from "./DeployableVM.sol";
+
+contract MyContract {
+    address constant WEIROLL_VM = 0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963; // Ethereum mainnet
+    
+    function runWeirollScript(
+        bytes32[] calldata commands,
+        bytes[] memory state
+    ) external payable returns (bytes[] memory) {
+        // Execute via delegatecall
+        (bool success, bytes memory result) = WEIROLL_VM.delegatecall(
+            abi.encodeWithSelector(
+                DeployableVM.execute.selector,
+                commands,
+                state
+            )
+        );
+        
+        require(success, "Weiroll execution failed");
+        return abi.decode(result, (bytes[]));
+    }
+}
+```
+
+### Key Points
+
+1. **Use delegatecall**: Always use `delegatecall` to invoke the DeployableVM
+2. **Preserve context**: Delegatecall executes in your contract's context, so:
+   - Storage modifications affect your contract
+   - `msg.sender` and `msg.value` are preserved
+   - ETH balance is your contract's balance
+3. **Handle errors**: Check the success boolean and handle failures appropriately
+4. **Decode results**: The return data must be ABI-decoded to get the state array
+
+## Security Considerations
+
+<Warning>
+**Important Security Notes:**
+
+1. **Delegatecall Context**: Commands execute in your contract's context with full access to storage, balance, and permissions
+2. **Command Validation**: Validate commands before execution if they come from untrusted sources
+3. **Reentrancy**: Be aware that commands may make external calls that could re-enter your contract
+4. **ETH Handling**: If the function is called with ETH (`payable`), ensure commands handle it securely
+</Warning>
+
+## See Also
+
+- [DeployableVM Contract](/api/deployable-vm) - Complete contract reference
+- [Network Deployments](/api/networks) - Deployment addresses across chains
+- [Weiroll Documentation](https://github.com/weiroll/weiroll) - Original Weiroll specification

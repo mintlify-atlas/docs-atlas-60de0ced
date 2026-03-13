@@ -1,0 +1,337 @@
+---
+title: Security Model
+description: Understand DeployableVM's security guarantees, constraints, and best practices for safe integration
+---
+
+## Delegatecall-Only Execution
+
+The core security principle of DeployableVM is that it **must only be executed via delegatecall**, never through a regular call. This constraint is enforced at the contract level.
+
+### Why This Matters
+
+When DeployableVM executes via delegatecall:
+
+- ✅ **Operates in your context**: The VM runs with your contract's storage, balance, and permissions
+- ✅ **You control access**: Only your contract can decide when to execute scripts
+- ✅ **Isolated execution**: The VM singleton has no storage or funds of its own
+- ❌ **No direct calls**: The singleton cannot be used to execute arbitrary operations
+
+<Warning>
+  If the VM could be called directly, an attacker could potentially use it to interact with contracts in ways the VM's deployer did not intend. The delegatecall-only pattern eliminates this attack vector.
+</Warning>
+
+### The Security Check
+
+Every execution starts with this critical validation:
+
+```solidity
+function execute(bytes32[] calldata commands, bytes[] memory state) 
+    public 
+    payable 
+    returns (bytes[] memory) 
+{
+    require(address(this) != WEIROLL_SINGLETON, CallableOnlyViaDelegateCall());
+    return _execute(commands, state);
+}
+```
+
+<Info>
+  Source: [DeployableVM.sol:22-29](https://github.com/cowprotocol/weiroll/blob/main/src/DeployableVM.sol#L22-L29)
+</Info>
+
+**How it works:**
+
+| Execution Type | `address(this)` | `WEIROLL_SINGLETON` | Check Result |
+|----------------|-----------------|---------------------|-------------|
+| Direct call | Singleton address | Singleton address | ❌ Reverts with `CallableOnlyViaDelegateCall()` |
+| Delegatecall | Your contract address | Singleton address | ✅ Passes, execution continues |
+
+## The WEIROLL_SINGLETON Pattern
+
+The immutable singleton pattern provides a compile-time security guarantee:
+
+```solidity
+address private immutable WEIROLL_SINGLETON;
+
+constructor() {
+    WEIROLL_SINGLETON = address(this);
+}
+```
+
+<Info>
+  Source: [DeployableVM.sol:16-20](https://github.com/cowprotocol/weiroll/blob/main/src/DeployableVM.sol#L16-L20)
+</Info>
+
+### Why Immutable?
+
+The `immutable` keyword provides critical security properties:
+
+1. **Set once at deployment**: The value is locked in the constructor
+2. **Cannot be changed**: No function can modify it after deployment
+3. **No storage slot**: Value is embedded in contract bytecode
+4. **Gas efficient**: Reading costs less than storage variables
+
+<Note>
+  Even if an attacker gained control of the VM's execution context, they could not modify `WEIROLL_SINGLETON` to bypass the security check.
+</Note>
+
+## EIP-6780 Context
+
+The contract includes an important comment about EIP-6780:
+
+```solidity
+// With the event of EIP-6780, we no longer have to guard against `SELFDESTRUCT`,
+// but the following check is added out of an abundance of caution in the event
+// the contract is deployed on a chain that does not support EIP-6780.
+```
+
+<Info>
+  Source: [DeployableVM.sol:23-25](https://github.com/cowprotocol/weiroll/blob/main/src/DeployableVM.sol#L23-L25)
+</Info>
+
+### What is EIP-6780?
+
+[EIP-6780](https://eips.ethereum.org/EIPS/eip-6780) (implemented in the Cancun upgrade) changed how `SELFDESTRUCT` works:
+
+**Before EIP-6780:**
+- `SELFDESTRUCT` could delete a contract's code at any time
+- An attacker might destroy the singleton and deploy malicious code at the same address
+- The delegatecall check helped prevent exploitation of a destroyed singleton
+
+**After EIP-6780:**
+- `SELFDESTRUCT` only works within the same transaction as contract creation
+- Once a transaction completes, the contract cannot be destroyed
+- The singleton address is permanently safe
+
+### Cross-Chain Considerations
+
+<Warning>
+  **Deploying to L2s or non-Ethereum chains?**
+  
+  Not all chains have implemented EIP-6780. The delegatecall check provides defense-in-depth for chains where `SELFDESTRUCT` still has its original behavior.
+</Warning>
+
+This design philosophy demonstrates **security through multiple layers**:
+- Primary: EIP-6780 prevents `SELFDESTRUCT` abuse (on supported chains)
+- Backup: Delegatecall check prevents misuse regardless of chain
+
+## The CallableOnlyViaDelegateCall Error
+
+The custom error provides clear, gas-efficient failure information:
+
+```solidity
+error CallableOnlyViaDelegateCall();
+```
+
+<Info>
+  Source: [DeployableVM.sol:14](https://github.com/cowprotocol/weiroll/blob/main/src/DeployableVM.sol#L14)
+</Info>
+
+### Why Custom Errors?
+
+Custom errors (introduced in Solidity 0.8.4) offer several advantages:
+
+1. **Gas efficient**: Use less gas than string-based revert messages
+2. **Type safe**: Can include typed parameters for debugging
+3. **ABI encoded**: Easy to decode in client applications
+4. **Self-documenting**: Clear intent in the code
+
+### Testing the Error
+
+The test suite verifies this error is thrown correctly:
+
+```solidity
+function test_reverts_if_not_delegatecall() public {
+    bytes32[] memory commands = new bytes32[](0);
+    bytes[] memory state = new bytes[](0);
+
+    vm.expectRevert(DeployableVM.CallableOnlyViaDelegateCall.selector);
+    weiVm.execute(commands, state);
+}
+```
+
+<Info>
+  Source: [DeployableVM.t.sol:14-20](https://github.com/cowprotocol/weiroll/blob/main/test/DeployableVM.t.sol#L14-L20)
+</Info>
+
+## Security Considerations When Integrating
+
+### 1. Access Control
+
+DeployableVM provides **no access control** on its own. Your contract must implement it:
+
+```solidity
+contract YourContract {
+    address public owner;
+    DeployableVM public immutable weirollVM;
+    
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Unauthorized");
+        _;
+    }
+    
+    function executeScript(
+        bytes32[] calldata commands,
+        bytes[] memory state
+    ) external onlyOwner returns (bytes[] memory) {
+        (bool success, bytes memory result) = address(weirollVM).delegatecall(
+            abi.encodeCall(DeployableVM.execute, (commands, state))
+        );
+        require(success, "Weiroll execution failed");
+        return abi.decode(result, (bytes[]));
+    }
+}
+```
+
+<Warning>
+  **Critical:** Weiroll scripts execute with full access to your contract's storage, balance, and permissions. Only allow trusted parties to provide commands.
+</Warning>
+
+### 2. Command Validation
+
+Consider validating commands before execution:
+
+- **Whitelist target contracts**: Only allow calls to approved addresses
+- **Restrict functions**: Only permit specific function selectors
+- **Validate state**: Ensure initial state values are within expected ranges
+- **Gas limits**: Set reasonable gas limits to prevent DoS
+
+```solidity
+function isAllowedTarget(address target) internal view returns (bool) {
+    // Implement your whitelist logic
+    return allowedTargets[target];
+}
+```
+
+### 3. Reentrancy Considerations
+
+Weiroll scripts can make external calls, which introduces reentrancy risks:
+
+```solidity
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+contract YourContract is ReentrancyGuard {
+    function executeScript(
+        bytes32[] calldata commands,
+        bytes[] memory state
+    ) external nonReentrant returns (bytes[] memory) {
+        // Execute Weiroll script
+    }
+}
+```
+
+<Note>
+  Each operation in a Weiroll script may call external contracts. Use standard reentrancy guards and follow checks-effects-interactions patterns.
+</Note>
+
+### 4. State Management
+
+Be careful with state array indices:
+
+```solidity
+// ❌ Bad: Uninitialized state slot
+bytes[] memory state = new bytes[](3);
+state[0] = abi.encode(amount);
+// state[1] not initialized - reading it will cause issues
+
+// ✅ Good: All required slots initialized
+bytes[] memory state = new bytes[](3);
+state[0] = abi.encode(amount);
+state[1] = abi.encode(address(0)); // Explicit initialization
+state[2] = abi.encode(0); // Reserved for output
+```
+
+### 5. Failed Operations
+
+Handle delegatecall failures appropriately:
+
+```solidity
+(bool success, bytes memory result) = address(weirollVM).delegatecall(
+    abi.encodeCall(DeployableVM.execute, (commands, state))
+);
+
+if (!success) {
+    // Decode error if needed
+    if (result.length > 0) {
+        assembly {
+            revert(add(result, 32), mload(result))
+        }
+    }
+    revert("Weiroll execution failed");
+}
+```
+
+### 6. Value Handling
+
+The execute function is `payable`, but value must be sent from your contract:
+
+```solidity
+// ❌ Bad: Cannot send value with delegatecall
+(bool success,) = address(weirollVM).delegatecall{value: 1 ether}(...);
+
+// ✅ Good: Value is already in your contract
+// Weiroll operations access your contract's balance via delegatecall
+```
+
+<Info>
+  Delegatecall does not support sending value. Ensure your contract has the necessary ETH balance before executing scripts that require it.
+</Info>
+
+## Audit Status
+
+DeployableVM builds on audited foundations:
+
+- **Base implementation**: Enso Finance's Weiroll VM is audited
+- **Original concept**: Based on the original Weiroll project
+- **Minimal additions**: Only adds the delegatecall enforcement layer
+
+<Note>
+  DeployableVM itself is a thin wrapper (31 lines of code). The core VM logic is inherited from the audited Enso Finance implementation.
+</Note>
+
+## Security Best Practices
+
+<Accordion title="✅ Do's">
+  - **Do** implement access control on functions that call DeployableVM
+  - **Do** validate commands and target addresses when possible
+  - **Do** use reentrancy guards on functions that execute scripts
+  - **Do** handle delegatecall failures explicitly
+  - **Do** thoroughly test your Weiroll scripts before production
+  - **Do** document which contracts your scripts interact with
+  - **Do** consider gas limits to prevent DoS attacks
+</Accordion>
+
+<Accordion title="❌ Don'ts">
+  - **Don't** allow untrusted parties to provide arbitrary commands
+  - **Don't** assume all Weiroll operations will succeed
+  - **Don't** forget to initialize all state array slots
+  - **Don't** ignore reentrancy risks from external calls
+  - **Don't** try to send value with delegatecall
+  - **Don't** bypass the delegatecall requirement
+  - **Don't** assume EIP-6780 is supported on all chains
+</Accordion>
+
+## Security Checklist
+
+Before deploying a contract that uses DeployableVM:
+
+- [ ] Access control is implemented on script execution functions
+- [ ] Target contracts and functions are validated/whitelisted
+- [ ] Reentrancy guards are in place
+- [ ] Initial state values are validated
+- [ ] Delegatecall failures are handled properly
+- [ ] Gas limits are configured appropriately
+- [ ] All Weiroll scripts have been thoroughly tested
+- [ ] Documentation explains which external contracts are accessed
+- [ ] Audit considers the full execution context
+
+## Learn More
+
+<CardGroup cols={2}>
+  <Card title="Understanding Weiroll" icon="book" href="/concepts/understanding-weiroll">
+    Learn the fundamentals of Weiroll's execution model
+  </Card>
+  <Card title="Integration Guide" icon="code" href="/guides/integration">
+    Start integrating DeployableVM securely
+  </Card>
+</CardGroup>

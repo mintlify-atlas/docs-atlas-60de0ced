@@ -1,80 +1,237 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get up and running with Weiroll DeployableVM in minutes
 ---
 
-## Get started in three steps
+Get your first Weiroll integration working in just a few minutes. This guide will walk you through creating a simple contract that uses DeployableVM to execute on-chain scripts.
 
-Get your documentation site running locally and make your first customization.
+## What You'll Build
 
-### Step 1: Set up your local environment
+By the end of this quickstart, you'll have:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+- A smart contract that integrates DeployableVM
+- A working example that executes Weiroll commands via delegatecall
+- Tests to verify your integration works correctly
 
-### Step 2: Deploy your changes
+## Before You Begin
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+Make sure you have:
+- [Foundry](https://book.getfoundry.sh/getting-started/installation) installed
+- Basic familiarity with Solidity
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+<Steps>
+  <Step title="Create a New Foundry Project">
+    Initialize a new Foundry project:
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    ```bash
+    forge init my-weiroll-project
+    cd my-weiroll-project
+    ```
+  </Step>
 
-### Step 3: Go live
+  <Step title="Create Your Contract">
+    Create a new file `src/MyWeirollContract.sol`:
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    ```solidity MyWeirollContract.sol
+    // SPDX-License-Identifier: MIT
+    pragma solidity ^0.8.27;
 
-## Next steps
+    interface IDeployableVM {
+        function execute(bytes32[] calldata commands, bytes[] memory state) 
+            external payable returns (bytes[] memory);
+    }
 
-Now that you have your docs running, explore these key features:
+    contract MyWeirollContract {
+        IDeployableVM public immutable weirollVM;
+        
+        constructor(address _weirollVM) {
+            weirollVM = IDeployableVM(_weirollVM);
+        }
+        
+        function executeScript(
+            bytes32[] calldata commands, 
+            bytes[] memory state
+        ) 
+            external 
+            payable
+            returns (bytes[] memory) 
+        {
+            // Execute Weiroll script via delegatecall
+            (bool success, bytes memory result) = address(weirollVM).delegatecall(
+                abi.encodeCall(IDeployableVM.execute, (commands, state))
+            );
+            
+            require(success, "Weiroll execution failed");
+            return abi.decode(result, (bytes[]));
+        }
+    }
+    ```
+
+    <Info>
+      The contract must use **delegatecall** to execute Weiroll commands. Direct calls to `execute()` will revert with `CallableOnlyViaDelegateCall`.
+    </Info>
+  </Step>
+
+  <Step title="Write a Test">
+    Create a test file `test/MyWeirollContract.t.sol`:
+
+    ```solidity MyWeirollContract.t.sol
+    // SPDX-License-Identifier: MIT
+    pragma solidity ^0.8.27;
+
+    import {Test} from "forge-std/Test.sol";
+    import {MyWeirollContract} from "../src/MyWeirollContract.sol";
+
+    // Mock DeployableVM for testing
+    contract MockDeployableVM {
+        function execute(bytes32[] calldata, bytes[] memory state) 
+            external 
+            payable 
+            returns (bytes[] memory) 
+        {
+            // Simple mock that returns the state unchanged
+            return state;
+        }
+    }
+
+    contract MyWeirollContractTest is Test {
+        MyWeirollContract public myContract;
+        MockDeployableVM public mockVM;
+        
+        function setUp() public {
+            mockVM = new MockDeployableVM();
+            myContract = new MyWeirollContract(address(mockVM));
+        }
+        
+        function test_executeScript() public {
+            // Prepare test data
+            bytes32[] memory commands = new bytes32[](0);
+            bytes[] memory state = new bytes[](1);
+            state[0] = abi.encode("test");
+            
+            // Execute via delegatecall
+            bytes[] memory result = myContract.executeScript(commands, state);
+            
+            // Verify result
+            assertEq(result.length, 1);
+            assertEq(result[0], state[0]);
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Run Your Tests">
+    Compile and test your contract:
+
+    ```bash
+    forge build
+    forge test -vv
+    ```
+
+    You should see output indicating your test passed:
+
+    ```text
+    Running 1 test for test/MyWeirollContract.t.sol:MyWeirollContractTest
+    [PASS] test_executeScript() (gas: 12345)
+    Test result: ok. 1 passed; 0 failed; finished in 1.23ms
+    ```
+  </Step>
+
+  <Step title="Use Real DeployableVM">
+    To use the actual DeployableVM on a live network, update your deployment script with the real address:
+
+    ```solidity
+    // Use the deployed address for your target chain
+    address weirollVM = 0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963;
+    MyWeirollContract myContract = new MyWeirollContract(weirollVM);
+    ```
+
+    See [Deployment Addresses](/api/networks) for addresses on all supported chains.
+  </Step>
+</Steps>
+
+## Understanding the Code
+
+### Key Components
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Delegatecall Pattern" icon="shield">
+    DeployableVM must be called via `delegatecall` to execute in your contract's context and access your contract's state and balance.
+  </Card>
+  <Card title="Command/State Model" icon="cubes">
+    Weiroll uses a command array and state array. Commands define operations, state holds data that flows between commands.
+  </Card>
+  <Card title="Return Values" icon="arrow-turn-down-left">
+    The `execute` function returns a `bytes[]` array containing the final state after all commands execute.
+  </Card>
+  <Card title="Payable Execution" icon="coins">
+    Mark your wrapper function as `payable` if you need to forward ETH during Weiroll script execution.
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## Building Real Scripts
+
+To create actual Weiroll command sequences, use the Weiroll planner libraries:
+
+<CodeGroup>
+
+```bash npm
+npm install @weiroll/weiroll.js
+```
+
+```bash Python
+pip install weiroll
+```
+
+</CodeGroup>
+
+The planner libraries help you construct the `commands` and `state` arrays that the VM executes.
+
+<Info>
+  For detailed examples of creating Weiroll scripts, see the [original Weiroll documentation](https://github.com/weiroll/weiroll) and [Enso Finance's examples](https://github.com/enso-finance/enso-weiroll).
+</Info>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Integration Guide" icon="code" href="/guides/integration">
+    Learn advanced integration patterns and best practices
+  </Card>
+  <Card title="How It Works" icon="gears" href="/concepts/how-it-works">
+    Understand the technical details of Weiroll's execution model
+  </Card>
+  <Card title="Security Model" icon="shield-check" href="/concepts/security-model">
+    Learn about security considerations and best practices
+  </Card>
+  <Card title="API Reference" icon="book" href="/api/deployable-vm">
+    Explore the complete contract API
+  </Card>
+</CardGroup>
+
+## Common Issues
+
+<Accordion title="Error: CallableOnlyViaDelegateCall">
+  This error occurs when you try to call `execute()` directly instead of via delegatecall.
+
+  **Solution**: Always use `delegatecall` to invoke the execute function:
+  ```solidity
+  (bool success, bytes memory result) = address(weirollVM).delegatecall(
+      abi.encodeCall(IDeployableVM.execute, (commands, state))
+  );
+  ```
+</Accordion>
+
+<Accordion title="Tests failing with gas issues">
+  If your tests run out of gas, you may need to increase the gas limit or optimize your Weiroll script.
+
+  **Solution**: Use the `-vvv` flag to see detailed gas usage:
+  ```bash
+  forge test -vvv
+  ```
+</Accordion>
+
+<Accordion title="How do I create command sequences?">
+  Command sequences are created using the Weiroll planner libraries (TypeScript or Python).
+
+  **Solution**: See the [Weiroll.js documentation](https://github.com/weiroll/weiroll.js) or [Weiroll Python documentation](https://github.com/weiroll/weiroll-python) for examples of building command sequences.
+</Accordion>

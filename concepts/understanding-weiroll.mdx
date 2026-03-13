@@ -1,0 +1,119 @@
+---
+title: Understanding Weiroll
+description: Learn about Weiroll's flexible execution system for on-chain scripting and how DeployableVM makes it accessible
+---
+
+## What is Weiroll?
+
+Weiroll is a flexible execution system designed to enable **trust-minimized and gas-efficient scripting** on Ethereum. It provides a powerful way to encode and execute complex sequences of operations on-chain in a deterministic and verifiable manner.
+
+At its core, Weiroll uses a command/state execution model that allows you to:
+- Encode multiple operations into a compact format
+- Execute them atomically in a single transaction
+- Pass state between operations efficiently
+- Minimize gas costs through optimized encoding
+
+<Info>
+  Weiroll was originally created by the [weiroll project](https://github.com/weiroll/weiroll) and further enhanced by [Enso Finance](https://github.com/enso-finance/enso-weiroll).
+</Info>
+
+## The Problem Weiroll Solves
+
+Traditional smart contract interactions often require:
+- Multiple transactions for complex operations
+- Custom contract code for each specific workflow
+- High gas costs from repeated external calls
+- Complex state management across transactions
+
+Weiroll addresses these challenges by providing a **scripting layer** that lets you compose operations dynamically without deploying new contracts for each workflow.
+
+## DeployableVM: A Simple Wrapper
+
+DeployableVM is a lightweight wrapper around Enso Finance's audited Weiroll VM that makes it easy to integrate Weiroll functionality into any contract. The key difference is in how it's designed to be used:
+
+<Note>
+  **DeployableVM vs. Raw Weiroll VM**
+  
+  - **Raw Weiroll VM**: Requires integration into your contract's inheritance hierarchy
+  - **DeployableVM**: Deployed once, used anywhere via `delegatecall`
+  - **Security**: Enforces delegatecall-only execution for safety
+</Note>
+
+### Key Features
+
+1. **Deploy Once, Use Everywhere**: Deploy a single instance and call it from any contract
+2. **Delegatecall Pattern**: Executes in your contract's context, accessing your storage and balance
+3. **Immutable Security**: Uses the `WEIROLL_SINGLETON` pattern to prevent direct calls
+4. **Battle-Tested**: Built on Enso Finance's audited implementation
+
+## Real-World Use Cases
+
+Weiroll's on-chain scripting enables powerful patterns:
+
+### DeFi Automation
+```solidity
+// Example: Complex DeFi operation in one transaction
+// 1. Withdraw from vault
+// 2. Swap on DEX
+// 3. Provide liquidity
+// 4. Stake LP tokens
+```
+
+### Protocol Integrations
+- **Multi-step swaps**: Route through multiple DEXes efficiently
+- **Yield farming**: Compound rewards across protocols
+- **Liquidations**: Execute complex liquidation logic atomically
+- **Governance**: Execute multi-action proposals
+
+### Smart Account Operations
+- **Batch transactions**: Execute multiple operations in one call
+- **Conditional logic**: Execute different paths based on runtime conditions
+- **Gas optimization**: Minimize overhead from multiple external calls
+
+<Warning>
+  Always thoroughly test your Weiroll scripts. While the VM itself is secure, the logic you encode is your responsibility.
+</Warning>
+
+## Command/State Execution Model
+
+Weiroll uses a unique two-part execution model:
+
+### Commands
+An array of `bytes32` values that encode:
+- Target contract addresses
+- Function selectors
+- Input/output mappings
+- Flags for call behavior
+
+### State
+An array of `bytes[]` that stores:
+- Initial input values
+- Intermediate results between operations
+- Final return values
+
+This separation allows for:
+- **Compact encoding**: Commands are tightly packed
+- **Efficient execution**: State is reused across operations
+- **Composability**: Outputs feed into subsequent inputs
+
+## Getting Started
+
+To use DeployableVM in your contract:
+
+1. Deploy or reference an existing DeployableVM instance
+2. Encode your operations into Weiroll commands and state
+3. Call the VM via `delegatecall` from your contract
+4. Handle the returned state array
+
+See the [How It Works](/concepts/how-it-works) page for technical implementation details.
+
+## Learn More
+
+<CardGroup cols={2}>
+  <Card title="How It Works" icon="gear" href="/concepts/how-it-works">
+    Deep dive into the technical implementation
+  </Card>
+  <Card title="Security Model" icon="shield" href="/concepts/security-model">
+    Understand the security guarantees and considerations
+  </Card>
+</CardGroup>

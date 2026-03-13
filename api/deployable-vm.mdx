@@ -1,0 +1,151 @@
+---
+title: 'DeployableVM Contract'
+description: 'Complete contract reference for the DeployableVM implementation'
+---
+
+## Overview
+
+The `DeployableVM` contract provides a deployable implementation of the Weiroll VM that can be used by arbitrary contracts through delegatecall. It inherits from Enso Finance's audited Weiroll VM contract.
+
+<Note>
+This contract makes use of Enso Finance's audited Weiroll VM contract available at [enso-weiroll](https://github.com/EnsoFinance/enso-weiroll). The original Weiroll is available at [weiroll/weiroll](https://github.com/weiroll/weiroll).
+</Note>
+
+## Contract Details
+
+**License:** LGPL-3.0-or-later  
+**Solidity Version:** ^0.8.27  
+**Author:** CoW Protocol Developers
+
+## Inheritance
+
+```solidity
+contract DeployableVM is WeirollVM
+```
+
+DeployableVM inherits from `VM` (aliased as `WeirollVM`) from the enso-weiroll library:
+
+```solidity
+import {VM as WeirollVM} from "lib/enso-weiroll/contracts/VM.sol";
+```
+
+## State Variables
+
+### WEIROLL_SINGLETON
+
+```solidity
+address private immutable WEIROLL_SINGLETON;
+```
+
+An immutable address that stores the original deployment address of the DeployableVM contract. This is used to enforce that the `execute` function can only be called via delegatecall.
+
+## Constructor
+
+```solidity
+constructor() {
+    WEIROLL_SINGLETON = address(this);
+}
+```
+
+The constructor sets `WEIROLL_SINGLETON` to the deployment address of the contract. This allows the contract to detect whether it's being called directly or via delegatecall.
+
+## Functions
+
+### execute
+
+```solidity
+function execute(bytes32[] calldata commands, bytes[] memory state) 
+    public 
+    payable 
+    returns (bytes[] memory)
+```
+
+Executes a Weiroll script consisting of commands and state.
+
+<ParamField path="commands" type="bytes32[]">
+  Array of encoded Weiroll commands to execute
+</ParamField>
+
+<ParamField path="state" type="bytes[]">
+  Array of state bytes used during command execution
+</ParamField>
+
+<ResponseField name="return" type="bytes[]">
+  The resulting state after executing all commands
+</ResponseField>
+
+<Warning>
+This function can **only** be called via delegatecall. Direct calls will revert with `CallableOnlyViaDelegateCall()`.
+</Warning>
+
+#### Requirements
+
+- The contract must be called via delegatecall (i.e., `address(this) != WEIROLL_SINGLETON`)
+
+#### Reverts
+
+- `CallableOnlyViaDelegateCall()` - If the function is called directly on the singleton rather than via delegatecall
+
+#### Implementation Details
+
+```solidity
+function execute(bytes32[] calldata commands, bytes[] memory state) public payable returns (bytes[] memory) {
+    // With the event of EIP-6780, we no longer have to guard against `SELFDESTRUCT`,
+    // but the following check is added out of an abundance of caution in the event
+    // the contract is deployed on a chain that does not support EIP-6780.
+    require(address(this) != WEIROLL_SINGLETON, CallableOnlyViaDelegateCall());
+
+    return _execute(commands, state);
+}
+```
+
+The function delegates to the internal `_execute` function from the parent `WeirollVM` contract after verifying the delegatecall requirement.
+
+<Note>
+The delegatecall check provides protection even on chains that do not support EIP-6780, which eliminated the `SELFDESTRUCT` opcode behavior.
+</Note>
+
+## Errors
+
+### CallableOnlyViaDelegateCall
+
+```solidity
+error CallableOnlyViaDelegateCall();
+```
+
+Thrown when the `execute` function is called directly on the DeployableVM singleton instead of via delegatecall.
+
+## Full Source Code
+
+```solidity
+// SPDX-License-Identifier: LGPL-3.0-or-later
+pragma solidity ^0.8.27;
+
+import {VM as WeirollVM} from "lib/enso-weiroll/contracts/VM.sol";
+
+/**
+ * @title DeployableVM for arbitrary contracts wanting to use Weiroll's VM.
+ * @author CoW Protocol Developers
+ * @dev This contract makes use of Enso Finance's audited Weiroll VM contract available
+ *      at: https://github.com/EnsoFinance/enso-weiroll. The original Weiroll is
+ *      available at: https://github.com/weiroll/weiroll.
+ */
+contract DeployableVM is WeirollVM {
+    error CallableOnlyViaDelegateCall();
+
+    address private immutable WEIROLL_SINGLETON;
+
+    constructor() {
+        WEIROLL_SINGLETON = address(this);
+    }
+
+    function execute(bytes32[] calldata commands, bytes[] memory state) public payable returns (bytes[] memory) {
+        // With the event of EIP-6780, we no longer have to guard against `SELFDESTRUCT`,
+        // but the following check is added out of an abundance of caution in the event
+        // the contract is deployed on a chain that does not support EIP-6780.
+        require(address(this) != WEIROLL_SINGLETON, CallableOnlyViaDelegateCall());
+
+        return _execute(commands, state);
+    }
+}
+```

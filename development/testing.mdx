@@ -1,0 +1,168 @@
+---
+title: Testing Weiroll
+description: Run and write tests for the Weiroll project
+---
+
+## Running Tests
+
+Weiroll uses Foundry's testing framework. Run all tests with:
+
+```bash
+forge test
+```
+
+### Verbose Output
+
+For detailed test output including traces:
+
+<CodeGroup>
+```bash Basic verbosity
+forge test -v
+```
+
+```bash Medium verbosity
+forge test -vv
+```
+
+```bash High verbosity (with traces)
+forge test -vvv
+```
+
+```bash Maximum verbosity
+forge test -vvvv
+```
+</CodeGroup>
+
+### Running Specific Tests
+
+Run a specific test contract:
+
+```bash
+forge test --match-contract DeployableVMTest
+```
+
+Run a specific test function:
+
+```bash
+forge test --match-test test_reverts_if_not_delegatecall
+```
+
+## Existing Tests
+
+The project includes tests in `test/DeployableVM.t.sol` that verify core functionality.
+
+### Delegatecall Requirement Test
+
+The most critical test ensures that the VM can only be executed via delegatecall:
+
+```solidity
+function test_reverts_if_not_delegatecall() public {
+    bytes32[] memory commands = new bytes32[](0);
+    bytes[] memory state = new bytes[](0);
+
+    vm.expectRevert(DeployableVM.CallableOnlyViaDelegateCall.selector);
+    weiVm.execute(commands, state);
+}
+```
+
+This test verifies that direct calls to `execute()` are rejected with the `CallableOnlyViaDelegateCall` error.
+
+### Delegatecall Success Test
+
+This test confirms that the VM works correctly when called via delegatecall:
+
+```solidity
+function test_callable_via_delegatecall() public {
+    bytes32[] memory commands = new bytes32[](0);
+    bytes[] memory state = new bytes[](0);
+
+    (bool success,) = address(weiVm).delegatecall(
+        abi.encodeCall(DeployableVM.execute, (commands, state))
+    );
+    assertTrue(success);
+}
+```
+
+This ensures that delegatecall execution succeeds as expected.
+
+## Test Coverage
+
+The existing tests cover:
+
+- **Security**: Enforcing delegatecall-only execution
+- **Functionality**: Verifying successful delegatecall execution
+- **Error Handling**: Checking proper revert behavior
+
+## Writing New Tests
+
+<Steps>
+  <Step title="Create a test contract">
+    Test contracts should inherit from `Test` and follow the naming convention `*.t.sol`:
+    
+    ```solidity
+    // SPDX-License-Identifier: LGPL-3.0-or-later
+    pragma solidity ^0.8.13;
+
+    import {DeployableVM} from "../src/DeployableVM.sol";
+    import {Test, console} from "forge-std/Test.sol";
+
+    contract MyTest is Test {
+        DeployableVM public weiVm;
+
+        function setUp() public {
+            weiVm = new DeployableVM();
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Write test functions">
+    Test functions should start with `test` or `testFail`:
+    
+    ```solidity
+    function test_myFeature() public {
+        // Test implementation
+        assertTrue(condition);
+    }
+    ```
+  </Step>
+
+  <Step title="Use Foundry cheatcodes">
+    Leverage Foundry's `vm` cheatcodes for advanced testing:
+    
+    ```solidity
+    // Expect a revert
+    vm.expectRevert(ErrorSelector);
+    
+    // Mock calls
+    vm.mockCall(address, abi, returnData);
+    
+    // Change caller
+    vm.prank(address);
+    ```
+  </Step>
+
+  <Step title="Run your tests">
+    Execute your new tests:
+    
+    ```bash
+    forge test --match-contract MyTest
+    ```
+  </Step>
+</Steps>
+
+## Continuous Integration
+
+The project uses GitHub Actions for CI. On every push and pull request:
+
+- Code formatting is checked (`forge fmt --check`)
+- Contracts are built (`forge build --sizes`)
+- All tests are run (`forge test -vvv`)
+
+Ensure your changes pass these checks before submitting a pull request.
+
+## Next Steps
+
+- [Learn about contributing](/development/contributing) to the project
+- [Build the project](/development/building) from source
+- [Deploy contracts](/guides/deployment) to test networks

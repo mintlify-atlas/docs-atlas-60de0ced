@@ -1,0 +1,86 @@
+---
+title: Building Weiroll
+description: Build the Weiroll project from source
+---
+
+## Prerequisites
+
+<Warning>
+For deterministic deployment compatibility, you must use a specific Foundry toolchain version. Using the latest Foundry versions will generate different addresses.
+</Warning>
+
+Install the required Foundry toolchain version:
+
+```bash
+foundryup -C cb9dfae298fe0b5a5cdef2536955f50b8c7f0bf5
+```
+
+## Compiler Settings
+
+The project uses the following Solidity compiler configuration (from `foundry.toml`):
+
+- **Solidity Version**: 0.8.27
+- **Optimizer**: Enabled
+- **Optimizer Runs**: 1,000,000
+- **Via IR**: Enabled
+
+These settings optimize for deployment efficiency and gas costs.
+
+## Build Process
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the Weiroll repository and navigate to the project directory:
+    
+    ```bash
+    git clone https://github.com/weiroll/weiroll.git
+    cd weiroll
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Install Foundry dependencies:
+    
+    ```bash
+    forge install
+    ```
+  </Step>
+
+  <Step title="Build the contracts">
+    Compile the smart contracts:
+    
+    ```bash
+    forge build
+    ```
+    
+    This will compile all contracts in the `src/` directory and output artifacts to the `out/` directory.
+  </Step>
+
+  <Step title="Format code (optional)">
+    Format Solidity code according to project standards:
+    
+    ```bash
+    forge fmt
+    ```
+    
+    This ensures consistent code style across the project. Imports are automatically sorted.
+  </Step>
+</Steps>
+
+## Build Verification
+
+After building, you can verify the build output:
+
+```bash
+forge build --sizes
+```
+
+This displays contract sizes to ensure they're within deployment limits.
+
+## Next Steps
+
+Once you've successfully built the project, you can:
+
+- [Run tests](/development/testing) to verify functionality
+- [Deploy contracts](/guides/deployment) to a network
+- [Contribute](/development/contributing) to the project

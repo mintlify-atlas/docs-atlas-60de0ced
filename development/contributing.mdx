@@ -1,0 +1,193 @@
+---
+title: Contributing to Weiroll
+description: How to contribute to the Weiroll project
+---
+
+## Getting Started
+
+Weiroll is an open-source project that welcomes contributions from the community. Whether you're fixing bugs, adding features, or improving documentation, your contributions are valued.
+
+### Repository
+
+The Weiroll project is hosted on GitHub:
+
+<Card title="Weiroll Repository" icon="github" href="https://github.com/weiroll/weiroll">
+  View the source code and contribute on GitHub
+</Card>
+
+## Development Workflow
+
+<Steps>
+  <Step title="Fork and clone">
+    Fork the repository on GitHub and clone your fork:
+    
+    ```bash
+    git clone https://github.com/YOUR_USERNAME/weiroll.git
+    cd weiroll
+    ```
+  </Step>
+
+  <Step title="Set up development environment">
+    Install the required Foundry toolchain version:
+    
+    ```bash
+    foundryup -C cb9dfae298fe0b5a5cdef2536955f50b8c7f0bf5
+    ```
+    
+    Then install dependencies:
+    
+    ```bash
+    forge install
+    ```
+  </Step>
+
+  <Step title="Create a feature branch">
+    Create a new branch for your changes:
+    
+    ```bash
+    git checkout -b feature/your-feature-name
+    ```
+    
+    Use descriptive branch names like `fix/delegatecall-bug` or `feature/new-command`.
+  </Step>
+
+  <Step title="Make your changes">
+    Implement your changes following the project's code style. Make sure to:
+    
+    - Write clear, concise code
+    - Add tests for new functionality
+    - Update documentation as needed
+    - Follow existing patterns and conventions
+  </Step>
+
+  <Step title="Test your changes">
+    Run the full test suite to ensure nothing breaks:
+    
+    ```bash
+    forge test
+    ```
+    
+    Run the formatter to ensure consistent code style:
+    
+    ```bash
+    forge fmt
+    ```
+  </Step>
+
+  <Step title="Commit your changes">
+    Commit with clear, descriptive messages:
+    
+    ```bash
+    git add .
+    git commit -m "feat: add new command type for batch operations"
+    ```
+  </Step>
+
+  <Step title="Push and create a pull request">
+    Push your branch to your fork:
+    
+    ```bash
+    git push origin feature/your-feature-name
+    ```
+    
+    Then open a pull request on GitHub with a clear description of your changes.
+  </Step>
+</Steps>
+
+## Code Style Guidelines
+
+### Solidity Code
+
+- Use **Solidity 0.8.27** or compatible versions
+- Follow the project's existing formatting conventions
+- Run `forge fmt` before committing to ensure consistent formatting
+- Sort imports (automatically handled by `forge fmt`)
+- Use clear, descriptive variable and function names
+
+### Testing Standards
+
+- Write tests for all new functionality
+- Test both success and failure cases
+- Use descriptive test names that explain what's being tested
+- Follow the existing test structure in `test/DeployableVM.t.sol`
+- Ensure all tests pass before submitting a PR
+
+### Documentation
+
+- Update documentation for any new features
+- Include code examples where appropriate
+- Keep documentation clear and concise
+- Use proper markdown formatting
+
+## Pull Request Process
+
+<Steps>
+  <Step title="Ensure CI passes">
+    The project uses GitHub Actions for continuous integration. Your PR must pass:
+    
+    - **Format check**: `forge fmt --check`
+    - **Build**: `forge build --sizes`
+    - **Tests**: `forge test -vvv`
+  </Step>
+
+  <Step title="Provide clear description">
+    In your PR description, include:
+    
+    - What problem does this solve?
+    - What changes were made?
+    - How was it tested?
+    - Any breaking changes or migration notes
+  </Step>
+
+  <Step title="Respond to feedback">
+    Be responsive to review comments and questions. Address feedback promptly and professionally.
+  </Step>
+
+  <Step title="Merge">
+    Once approved, maintainers will merge your PR. Thank you for contributing!
+  </Step>
+</Steps>
+
+## Areas for Contribution
+
+### Code Contributions
+
+- **Bug fixes**: Fix issues reported in GitHub Issues
+- **New features**: Implement new command types or VM capabilities
+- **Optimization**: Improve gas efficiency
+- **Security**: Enhance security checks and validations
+
+### Documentation Contributions
+
+- Improve existing documentation
+- Add examples and tutorials
+- Fix typos and clarify confusing sections
+- Translate documentation
+
+### Testing Contributions
+
+- Add test coverage for edge cases
+- Improve existing tests
+- Add fuzzing tests
+- Add integration tests
+
+## Community
+
+Weiroll builds upon the pioneering work of:
+
+- The original [weiroll](https://github.com/weiroll/weiroll) project
+- [Enso Finance's fork of weiroll](https://github.com/enso-finance/enso-weiroll)
+
+We're grateful for the innovative work that made this project possible.
+
+## Getting Help
+
+If you have questions or need help:
+
+- Open a GitHub Discussion for general questions
+- Check existing Issues for similar problems
+- Read the [building](/development/building) and [testing](/development/testing) guides
+
+## License
+
+By contributing to Weiroll, you agree that your contributions will be licensed under the project's LGPL-3.0-or-later license.

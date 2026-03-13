@@ -1,0 +1,273 @@
+---
+title: 'Deployment Guide'
+description: 'Deploy DeployableVM to a new EVM chain'
+---
+
+## Overview
+
+DeployableVM uses CREATE2 with an empty salt to achieve deterministic deployment across all EVM chains. This ensures the contract has the same address on every network, simplifying multi-chain integration.
+
+<Warning>
+You must use the specific Foundry version `cb9dfae298fe0b5a5cdef2536955f50b8c7f0bf5` to ensure deterministic addresses match across chains.
+</Warning>
+
+## Prerequisites
+
+<Steps>
+  <Step title="Install Correct Foundry Version">
+    Different Foundry versions generate different deterministic addresses. Use this exact version:
+
+    ```bash
+    foundryup -C cb9dfae298fe0b5a5cdef2536955f50b8c7f0bf5
+    ```
+
+    Verify the installation:
+    ```bash
+    forge --version
+    ```
+  </Step>
+
+  <Step title="Build the Project">
+    Clone the repository and build the contracts:
+
+    ```bash
+    git clone https://github.com/cowprotocol/weiroll
+    cd weiroll
+    forge build
+    ```
+  </Step>
+
+  <Step title="Run Tests">
+    Ensure everything works correctly:
+
+    ```bash
+    forge test
+    ```
+  </Step>
+</Steps>
+
+## Environment Setup
+
+Before deploying, export the required environment variables:
+
+```bash
+# Required for Etherscan-based explorers
+export ETHERSCAN_API_KEY='your_api_key_here'
+
+# Private key of the deployer account
+export PK='your_private_key_here'
+
+# RPC URL for the target chain
+export ETH_RPC_URL='https://rpc.node.url.here.example.com'
+```
+
+<Warning>
+Never commit your private key or API keys to version control. Use environment variables or a secure secret management system.
+</Warning>
+
+## Deployment Script
+
+The deployment uses CREATE2 with an empty salt for deterministic addressing:
+
+```solidity DeployableVM.s.sol
+// SPDX-License-Identifier: LGPL-3.0-or-later
+pragma solidity ^0.8.13;
+
+import {DeployableVM} from "../src/DeployableVM.sol";
+import {Script, console} from "forge-std/Script.sol";
+
+contract DeployableVMScript is Script {
+    DeployableVM public weiVm;
+
+    function setUp() public {}
+
+    function run() public {
+        vm.startBroadcast();
+
+        // Use deterministic salt to deploy the contract.
+        weiVm = new DeployableVM{salt: ""}();
+
+        vm.stopBroadcast();
+    }
+}
+```
+
+### CREATE2 Deterministic Deployment
+
+The script uses `new DeployableVM{salt: ""}()`, which:
+- Deploys using CREATE2 opcode with an empty salt (`""`)
+- Generates the same contract address on all EVM chains
+- Allows easy verification of deployment correctness
+
+The deterministic address is: `0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963`
+
+## Deployment Process
+
+<Steps>
+  <Step title="Verify Deterministic Address">
+    Before broadcasting, verify that your environment will generate the correct address:
+
+    ```bash
+    forge script 'script/DeployableVM.s.sol:DeployableVMScript' \
+      -vvvv \
+      --rpc-url "$ETH_RPC_URL" \
+      --private-key "$PK"
+    ```
+
+    The output should show the expected deployment address: `0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963`
+  </Step>
+
+  <Step title="Deploy and Verify">
+    Deploy the contract and automatically verify on the block explorer:
+
+    <CodeGroup>
+    ```bash With Verification
+    forge script 'script/DeployableVM.s.sol:DeployableVMScript' \
+      -vvvv \
+      --rpc-url "$ETH_RPC_URL" \
+      --private-key "$PK" \
+      --verify \
+      --broadcast
+    ```
+
+    ```bash Without Verification
+    forge script 'script/DeployableVM.s.sol:DeployableVMScript' \
+      -vvvv \
+      --rpc-url "$ETH_RPC_URL" \
+      --private-key "$PK" \
+      --broadcast
+    ```
+    </CodeGroup>
+
+    <Note>
+    Some block explorers may not support automatic verification. You can verify manually later using the deployment artifacts.
+    </Note>
+  </Step>
+
+  <Step title="Commit Deployment File">
+    After successful deployment, Foundry generates a deployment file in `./broadcast/DeployableVM.s.sol/<chain-id>/run-latest.json`.
+
+    ```bash
+    git add broadcast/DeployableVM.s.sol/<chain-id>/
+    git commit -m "Deploy DeployableVM to chain <chain-id>"
+    ```
+  </Step>
+
+  <Step title="Update networks.json">
+    Generate the updated networks file with all deployments:
+
+    ```bash
+    bash dev/generate-networks-file.sh > networks.json
+    ```
+
+    This script scans all deployment files and creates a comprehensive JSON mapping of chain IDs to deployment addresses and transaction hashes.
+
+    ```bash
+    git add networks.json
+    git commit -m "Update networks.json with new deployment"
+    ```
+  </Step>
+</Steps>
+
+## Verification
+
+### Automatic Verification
+
+If automatic verification succeeded during deployment, your contract should be verified on the block explorer immediately.
+
+### Manual Verification
+
+If automatic verification failed, verify manually:
+
+<CodeGroup>
+```bash Standard Verification
+forge verify-contract \
+  0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963 \
+  src/DeployableVM.sol:DeployableVM \
+  --chain-id <chain-id> \
+  --etherscan-api-key "$ETHERSCAN_API_KEY"
+```
+
+```bash With Constructor Args (if needed)
+forge verify-contract \
+  0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963 \
+  src/DeployableVM.sol:DeployableVM \
+  --chain-id <chain-id> \
+  --etherscan-api-key "$ETHERSCAN_API_KEY" \
+  --constructor-args $(cast abi-encode "constructor()")
+```
+</CodeGroup>
+
+### Verify Across Chains
+
+To verify the deployment address is consistent:
+
+```bash
+# Check the deployed bytecode matches
+cast code 0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963 --rpc-url <chain-1-rpc>
+cast code 0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963 --rpc-url <chain-2-rpc>
+```
+
+The bytecode should be identical across all chains.
+
+## Deployment Checklist
+
+<AccordionGroup>
+  <Accordion title="Pre-Deployment">
+    - [ ] Foundry version `cb9dfae298fe0b5a5cdef2536955f50b8c7f0bf5` installed
+    - [ ] Contracts build successfully with `forge build`
+    - [ ] All tests pass with `forge test`
+    - [ ] Environment variables set (`ETHERSCAN_API_KEY`, `PK`, `ETH_RPC_URL`)
+    - [ ] Deployer account has sufficient native tokens for gas
+  </Accordion>
+
+  <Accordion title="During Deployment">
+    - [ ] Dry run completed with correct deterministic address
+    - [ ] Deployment transaction confirmed on-chain
+    - [ ] Contract address matches expected: `0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963`
+    - [ ] Contract verification succeeded (automatic or manual)
+  </Accordion>
+
+  <Accordion title="Post-Deployment">
+    - [ ] Deployment file committed to repository
+    - [ ] `networks.json` updated and committed
+    - [ ] Bytecode verified against other chain deployments
+    - [ ] Integration tests run against deployed contract
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Wrong Deployment Address">
+    If the deployment address doesn't match `0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963`:
+    
+    1. Check Foundry version: `forge --version`
+    2. Reinstall correct version: `foundryup -C cb9dfae298fe0b5a5cdef2536955f50b8c7f0bf5`
+    3. Clean build: `forge clean && forge build`
+    4. Try dry run again
+  </Accordion>
+
+  <Accordion title="Verification Failed">
+    If automatic verification fails:
+    
+    1. Wait 1-2 minutes for the block explorer to index the transaction
+    2. Try manual verification with `forge verify-contract`
+    3. Check if the block explorer requires a different API endpoint
+    4. Verify manually through the block explorer web interface
+  </Accordion>
+
+  <Accordion title="Insufficient Gas">
+    If deployment fails due to gas:
+    
+    1. Ensure deployer account has enough native tokens
+    2. Check current gas prices: `cast gas-price --rpc-url "$ETH_RPC_URL"`
+    3. Add gas parameters if needed: `--gas-limit 500000 --gas-price 20000000000`
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+- View all [multi-chain deployments](/guides/multi-chain)
+- Learn how to [integrate DeployableVM](/guides/integration) into your contracts
+- Explore the [API Reference](/api/execute-function)

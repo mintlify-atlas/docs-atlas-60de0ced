@@ -1,0 +1,97 @@
+---
+title: Introduction
+description: Overview of Weiroll and the DeployableVM implementation
+---
+
+## What is Weiroll?
+
+Weiroll is a flexible execution system designed to enable trust-minimized and gas-efficient scripting on Ethereum. It provides a powerful virtual machine (VM) that can execute sequences of operations in a single transaction, making complex on-chain operations more efficient and composable.
+
+This implementation provides a deployable, self-contained instance of the Weiroll VM that can be easily integrated into any Solidity project requiring on-chain scripting capabilities.
+
+## DeployableVM Implementation
+
+The **DeployableVM** contract extends Enso Finance's audited Weiroll VM implementation, providing a production-ready, secure execution environment for arbitrary contracts. It is specifically designed to be called via `delegatecall`, ensuring that scripts execute within the context of the calling contract.
+
+<CardGroup cols={2}>
+  <Card title="Gas Efficient" icon="fire">
+    Optimized with via-IR compilation and 1,000,000 optimizer runs for minimal gas costs
+  </Card>
+  <Card title="Trust Minimized" icon="shield-halved">
+    Enforces delegatecall-only execution, preventing unauthorized direct calls
+  </Card>
+  <Card title="Deterministic Deployment" icon="fingerprint">
+    Deployed using CREATE2 with empty salt for consistent addresses across chains
+  </Card>
+  <Card title="Multi-Chain Support" icon="network-wired">
+    Available on Ethereum, Polygon, Arbitrum, Optimism, Base, BSC, Gnosis, and Avalanche
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Delegatecall-Only Security
+
+The contract implements a critical security check to ensure it can only be executed via `delegatecall`:
+
+```solidity
+function execute(bytes32[] calldata commands, bytes[] memory state) 
+    public 
+    payable 
+    returns (bytes[] memory) 
+{
+    require(address(this) != WEIROLL_SINGLETON, CallableOnlyViaDelegateCall());
+    return _execute(commands, state);
+}
+```
+
+This protection ensures that the VM always runs in the calling contract's context, maintaining proper state isolation and security boundaries.
+
+### Compiler Optimization
+
+The contract is compiled with aggressive optimization settings for production use:
+
+- **Via IR**: Enabled for advanced optimization passes
+- **Optimizer Runs**: 1,000,000 runs for minimal deployment and execution costs
+- **Solidity Version**: 0.8.27 with the latest security features
+
+### EIP-6780 Compliance
+
+The implementation includes safeguards against `SELFDESTRUCT` attacks, with additional protections for chains that may not support EIP-6780. This ensures the contract remains secure across different EVM implementations.
+
+## Project Origins
+
+This project builds upon significant prior work:
+
+<CardGroup cols={2}>
+  <Card title="Original Weiroll" icon="github" href="https://github.com/weiroll/weiroll">
+    The pioneering project that introduced the Weiroll VM concept
+  </Card>
+  <Card title="Enso Finance Fork" icon="code-branch" href="https://github.com/enso-finance/enso-weiroll">
+    The audited implementation that DeployableVM extends
+  </Card>
+</CardGroup>
+
+<Note>
+The DeployableVM is developed and maintained by **CoW Protocol Developers** and is licensed under LGPL-3.0-or-later.
+</Note>
+
+## Use Cases
+
+The DeployableVM is ideal for:
+
+- **Multi-step DeFi Operations**: Execute complex swap sequences, liquidity management, or yield strategies in a single transaction
+- **Protocol Automation**: Implement sophisticated on-chain logic without deploying custom contracts
+- **Gas Optimization**: Batch multiple operations to reduce transaction overhead
+- **Composable Scripts**: Build reusable operation sequences that can be shared across protocols
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Learn how to integrate DeployableVM into your project
+  </Card>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get started with a complete working example
+  </Card>
+</CardGroup>

@@ -1,0 +1,277 @@
+---
+title: 'Multi-Chain Deployments'
+description: 'DeployableVM addresses and deployments across EVM chains'
+---
+
+## Overview
+
+DeployableVM is deployed at the same deterministic address across all supported EVM chains using CREATE2 with an empty salt. This ensures consistent integration regardless of which chain you're targeting.
+
+<Info>
+All deployments use the deterministic address: `0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963`
+</Info>
+
+## Supported Networks
+
+DeployableVM is officially deployed on the following networks:
+
+<CardGroup cols={2}>
+  <Card title="Ethereum Mainnet" icon="ethereum" href="https://etherscan.io/address/0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963">
+    Chain ID: 1
+  </Card>
+  <Card title="Optimism" icon="circle" href="https://optimistic.etherscan.io/address/0x9585c3062df1c247d5e373cfca9167f7dc2b5963">
+    Chain ID: 10
+  </Card>
+  <Card title="BNB Smart Chain" icon="coins" href="https://bscscan.com/address/0x9585c3062df1c247d5e373cfca9167f7dc2b5963">
+    Chain ID: 56
+  </Card>
+  <Card title="Gnosis Chain" icon="link" href="https://gnosisscan.io/address/0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963">
+    Chain ID: 100
+  </Card>
+  <Card title="Polygon" icon="hexagon" href="https://polygonscan.com/address/0x9585c3062df1c247d5e373cfca9167f7dc2b5963">
+    Chain ID: 137
+  </Card>
+  <Card title="Base" icon="square" href="https://basescan.org/address/0x9585c3062df1c247d5e373cfca9167f7dc2b5963">
+    Chain ID: 8453
+  </Card>
+  <Card title="Arbitrum One" icon="arrows-to-circle" href="https://arbiscan.io/address/0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963">
+    Chain ID: 42161
+  </Card>
+  <Card title="Avalanche C-Chain" icon="mountain" href="https://snowtrace.io/address/0x9585c3062df1c247d5e373cfca9167f7dc2b5963">
+    Chain ID: 43114
+  </Card>
+  <Card title="Sepolia Testnet" icon="flask" href="https://sepolia.etherscan.io/address/0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963">
+    Chain ID: 11155111
+  </Card>
+</CardGroup>
+
+## Deployment Details
+
+Each deployment includes the contract address and the deployment transaction hash for verification:
+
+| Chain | Chain ID | Address | Transaction Hash |
+|-------|----------|---------|------------------|
+| Ethereum Mainnet | 1 | `0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963` | `0x6e22d6584ebfad16a5d222ae5e52c901b8a2a90f4948e41fc573b4c3f37adbe7` |
+| Optimism | 10 | `0x9585c3062df1c247d5e373cfca9167f7dc2b5963` | `0x71e3384a0d565f141647004d13f317a5047b1304f85774ab4a5a36a8e5170063` |
+| BNB Smart Chain | 56 | `0x9585c3062df1c247d5e373cfca9167f7dc2b5963` | `0xc9d8adc83c0c9b4291c16485df474455f3e88e6e1f5c69410f15cc5e9f9df7c6` |
+| Gnosis Chain | 100 | `0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963` | `0xb22e5bedb95ed7c97308326c14b4ad9211a4f3d433839c0145ba233c402f07c1` |
+| Polygon | 137 | `0x9585c3062df1c247d5e373cfca9167f7dc2b5963` | `0xd1a743be2a13e767c1349edb0f9316504130e764d605fd150c4fd69b25a072d6` |
+| Base | 8453 | `0x9585c3062df1c247d5e373cfca9167f7dc2b5963` | `0xe4de4c19b497233a337dd00b51543cd148fad25e86378a2d0d1f54e7e06cf00c` |
+| Arbitrum One | 42161 | `0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963` | `0xf873b1ec29c2f57f18f99ce8762624bc1c82a0ca8a91bd64cf94af92254f41b8` |
+| Avalanche C-Chain | 43114 | `0x9585c3062df1c247d5e373cfca9167f7dc2b5963` | `0x6a5b973914929e0bc4019ee1a9aab99cfbcf1630722c663365459e88bcbf65c1` |
+| Sepolia Testnet | 11155111 | `0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963` | `0x5d873b89646e5b7947242ad3ef1e5b32394c6277b31162127e7a87356afb347e` |
+
+## Integration Examples
+
+You can reference DeployableVM in your contracts using the deterministic address:
+
+<CodeGroup>
+```solidity Hardcoded Reference
+contract YourContract {
+    address private constant WEIROLL_VM = 0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963;
+
+    function executeWeiroll(
+        bytes32[] calldata commands,
+        bytes[] memory state
+    ) external payable returns (bytes[] memory) {
+        (bool success, bytes memory result) = WEIROLL_VM.delegatecall(
+            abi.encodeWithSignature(
+                "execute(bytes32[],bytes[])",
+                commands,
+                state
+            )
+        );
+        require(success, "Execution failed");
+        return abi.decode(result, (bytes[]));
+    }
+}
+```
+
+```solidity Constructor Injection
+contract YourContract {
+    address public immutable weirollVM;
+
+    constructor() {
+        // Same address on all chains
+        weirollVM = 0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963;
+    }
+
+    function executeWeiroll(
+        bytes32[] calldata commands,
+        bytes[] memory state
+    ) external payable returns (bytes[] memory) {
+        (bool success, bytes memory result) = weirollVM.delegatecall(
+            abi.encodeWithSignature(
+                "execute(bytes32[],bytes[])",
+                commands,
+                state
+            )
+        );
+        require(success, "Execution failed");
+        return abi.decode(result, (bytes[]));
+    }
+}
+```
+
+```solidity Multi-Chain Factory
+contract MultiChainFactory {
+    address private constant WEIROLL_VM = 0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963;
+
+    function deployContract() external returns (address) {
+        // Deploy contracts that use the same Weiroll VM
+        // across all supported chains
+        return address(new YourContract(WEIROLL_VM));
+    }
+}
+```
+</CodeGroup>
+
+## Verifying Deployments
+
+### Via Block Explorer
+
+You can verify any deployment by visiting the block explorer link and checking:
+
+1. The contract bytecode matches other chains
+2. The deployment transaction hash matches `networks.json`
+3. The contract is verified and shows the correct source code
+
+### Via Cast (Command Line)
+
+Verify the bytecode is identical across chains:
+
+```bash
+# Get bytecode from Ethereum Mainnet
+cast code 0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963 \
+  --rpc-url https://eth.llamarpc.com
+
+# Get bytecode from Arbitrum
+cast code 0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963 \
+  --rpc-url https://arb1.arbitrum.io/rpc
+
+# Compare - they should be identical
+```
+
+### Via Script
+
+Automate verification across multiple chains:
+
+```bash
+#!/bin/bash
+
+ADDRESS="0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963"
+
+chains=(
+  "https://eth.llamarpc.com"
+  "https://arb1.arbitrum.io/rpc"
+  "https://polygon-rpc.com"
+  "https://mainnet.base.org"
+)
+
+for rpc in "${chains[@]}"; do
+  echo "Checking $rpc"
+  cast code $ADDRESS --rpc-url $rpc | head -c 100
+  echo ""
+done
+```
+
+## Chain-Specific Considerations
+
+<AccordionGroup>
+  <Accordion title="Ethereum Mainnet (Chain ID: 1)">
+    - Higher gas costs - optimize your Weiroll command sequences
+    - Full EIP-6780 support (SELFDESTRUCT protection active)
+    - Most battle-tested network for Weiroll deployments
+  </Accordion>
+
+  <Accordion title="Optimism (Chain ID: 10)">
+    - Lower gas costs than mainnet
+    - EIP-6780 supported
+    - Note: Some opcodes behave differently on L2s
+  </Accordion>
+
+  <Accordion title="Arbitrum One (Chain ID: 42161)">
+    - Very low gas costs
+    - EIP-6780 supported
+    - Excellent for high-frequency Weiroll operations
+  </Accordion>
+
+  <Accordion title="Base (Chain ID: 8453)">
+    - Low gas costs, similar to Optimism
+    - Growing ecosystem with strong tooling support
+    - EIP-6780 supported
+  </Accordion>
+
+  <Accordion title="Polygon (Chain ID: 137)">
+    - Very low gas costs
+    - High transaction throughput
+    - Popular for DeFi integrations
+  </Accordion>
+
+  <Accordion title="BNB Smart Chain (Chain ID: 56)">
+    - Low gas costs
+    - Large DeFi ecosystem
+    - Different block explorer (BscScan)
+  </Accordion>
+
+  <Accordion title="Avalanche C-Chain (Chain ID: 43114)">
+    - Low gas costs and fast finality
+    - Growing DeFi presence
+    - Uses Snowtrace block explorer
+  </Accordion>
+
+  <Accordion title="Gnosis Chain (Chain ID: 100)">
+    - Extremely low gas costs
+    - Excellent for testing production scenarios
+    - Uses xDai for gas payments
+  </Accordion>
+
+  <Accordion title="Sepolia Testnet (Chain ID: 11155111)">
+    - Free testnet for development
+    - Use for testing before mainnet deployment
+    - Faucets available for test ETH
+  </Accordion>
+</AccordionGroup>
+
+## Networks File
+
+All deployment information is maintained in the official [`networks.json`](https://github.com/cowprotocol/weiroll/blob/main/networks.json) file:
+
+```json
+{
+  "DeployableVM": {
+    "1": {
+      "address": "0x9585c3062Df1C247d5E373Cfca9167F7dC2b5963",
+      "transactionHash": "0x6e22d6584ebfad16a5d222ae5e52c901b8a2a90f4948e41fc573b4c3f37adbe7"
+    },
+    "10": {
+      "address": "0x9585c3062df1c247d5e373cfca9167f7dc2b5963",
+      "transactionHash": "0x71e3384a0d565f141647004d13f317a5047b1304f85774ab4a5a36a8e5170063"
+    }
+    // ... additional chains
+  }
+}
+```
+
+This file is automatically generated from deployment artifacts using:
+
+```bash
+bash dev/generate-networks-file.sh > networks.json
+```
+
+## Request New Chain Deployment
+
+To request DeployableVM deployment on a new EVM chain:
+
+1. Open an issue on the [GitHub repository](https://github.com/cowprotocol/weiroll/issues)
+2. Provide the chain name, chain ID, and RPC endpoint
+3. Confirm the chain is EVM-compatible and supports CREATE2
+4. Community or core team will handle the deployment
+
+Or deploy it yourself following the [deployment guide](/guides/deployment) and submit a PR with the updated `networks.json` file.
+
+## Next Steps
+
+- Learn how to [integrate DeployableVM](/guides/integration) into your contracts
+- Follow the [deployment guide](/guides/deployment) to deploy on a new chain
+- Explore the [API Reference](/api/execute-function)

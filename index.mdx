@@ -1,97 +1,100 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Welcome to Weiroll"
+description: "A deployable, self-contained instance of Weiroll for trust-minimized and gas-efficient on-chain scripting on Ethereum."
 ---
 
-## Setting up
+## What is Weiroll?
 
-Get your documentation site up and running in minutes.
+Weiroll is a flexible execution system designed to enable trust-minimized and gas-efficient scripting on Ethereum. This implementation builds upon the original Weiroll concept with a simple, self-contained deployment that can be integrated into any smart contract via delegatecall.
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
+<CardGroup cols={2}>
   <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
+    title="Get Started"
+    icon="rocket"
+    href="/introduction"
   >
-    Edit your docs locally and preview them in real time.
+    Install and integrate Weiroll into your project in minutes
   </Card>
   <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
+    title="Understanding Weiroll"
+    icon="lightbulb"
+    href="/concepts/understanding-weiroll"
   >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+    Learn how Weiroll enables composable on-chain scripting
   </Card>
   <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
-
-## Create beautiful pages
-
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
+    title="Integration Guide"
     icon="code"
-    href="/essentials/code"
+    href="/guides/integration"
   >
-    Add sample code to demonstrate how to use your product.
+    Integrate DeployableVM into your smart contracts
   </Card>
   <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
+    title="API Reference"
+    icon="book"
+    href="/api/deployable-vm"
   >
-    Display images and other media.
+    Explore the contract API and deployment addresses
+  </Card>
+</CardGroup>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card
+    title="Delegatecall-Only Execution"
+    icon="shield"
+  >
+    Secure integration pattern that prevents direct execution and ensures safe operation within your contract's context
   </Card>
   <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
+    title="Deterministic Deployment"
+    icon="fingerprint"
   >
-    Write once and reuse across your docs.
+    Same contract address across all EVM chains using CREATE2 for predictable deployments
   </Card>
-</Columns>
+  <Card
+    title="Gas-Efficient Scripting"
+    icon="gauge-high"
+  >
+    Execute complex multi-step operations with optimized gas consumption
+  </Card>
+  <Card
+    title="Multi-Chain Support"
+    icon="globe"
+  >
+    Deployed on Ethereum, Polygon, Arbitrum, Optimism, Base, and more
+  </Card>
+</CardGroup>
 
-## Need inspiration?
+## Quick Example
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+```solidity example.sol
+import {DeployableVM} from "weiroll/DeployableVM.sol";
+
+contract MyContract {
+    DeployableVM public immutable weirollVM;
+    
+    constructor(address _weirollVM) {
+        weirollVM = DeployableVM(_weirollVM);
+    }
+    
+    function executeScript(bytes32[] calldata commands, bytes[] memory state) 
+        external 
+        returns (bytes[] memory) 
+    {
+        // Execute Weiroll script via delegatecall
+        (bool success, bytes memory result) = address(weirollVM).delegatecall(
+            abi.encodeCall(DeployableVM.execute, (commands, state))
+        );
+        require(success, "Weiroll execution failed");
+        return abi.decode(result, (bytes[]));
+    }
+}
+```
+
+## Acknowledgements
+
+This repository owes its origins to the pioneering work done by:
+- The original [Weiroll](https://github.com/weiroll/weiroll) project
+- [Enso Finance's fork of Weiroll](https://github.com/enso-finance/enso-weiroll)
