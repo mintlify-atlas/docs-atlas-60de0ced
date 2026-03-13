@@ -1,0 +1,78 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "Weiroll",
+  "projectDescription": "A deployable, self-contained instance of Weiroll for trust-minimized and gas-efficient on-chain scripting on Ethereum.",
+  "theme": "aspen",
+  "primaryColor": "#6366F1",
+  "lightColor": "#818CF8",
+  "darkColor": "#4F46E5",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/understanding-weiroll",
+              "concepts/how-it-works",
+              "concepts/security-model"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/integration",
+              "guides/deployment",
+              "guides/multi-chain"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/building",
+              "development/testing",
+              "development/contributing"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Contract Reference",
+            "pages": [
+              "api/deployable-vm",
+              "api/execute-function"
+            ]
+          },
+          {
+            "group": "Deployment Addresses",
+            "pages": [
+              "api/networks"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Delegatecall-only execution for secure integration",
+    "Deterministic deployment across multiple EVM chains",
+    "Gas-efficient scripting with Weiroll VM",
+    "Multi-chain support (Ethereum, Polygon, Arbitrum, Optimism, Base, and more)"
+  ],
+  "publicApiSurface": [
+    "DeployableVM.execute(bytes32[] calldata commands, bytes[] memory state)",
+    "CallableOnlyViaDelegateCall error"
+  ]
+}
